@@ -5,46 +5,69 @@ export class DouyuClient extends PlatformClient {
   platform = 'douyu' as const;
 
   async getRecommend(page: number, size: number): Promise<LiveRoom[]> {
-    const offset = (page - 1) * size;
-    const url = `https://www.douyu.com/japi/weblist/api/getRecList?page=${page}&type=yz`;
+    const url = `https://m.douyu.com/api/room/list?page=${page}&type=yz`;
 
     const data = await this.fetchJSON<any>(url);
-    const list = data.data?.rl || [];
+
+    if (data.code !== 0 || !data.data?.list) {
+      return [];
+    }
+
+    const list = data.data.list;
 
     return list.slice(0, size).map((item: any) => ({
-      roomId: item.rid,
+      roomId: String(item.rid),
       platform: this.platform,
-      title: item.rn,
+      title: item.roomName,
       owner: {
-        name: item.nn,
-        avatar: item.av,
+        name: item.nickname,
+        avatar: item.avatar,
       },
-      cover: item.rs16,
-      online: parseInt(item.ol),
-      category: item.c2name,
+      cover: item.roomSrc,
+      online: this.parseOnline(item.hn),
+      category: item.cate2Name || '其他',
       isLive: item.isLive === 1,
     }));
+  }
+
+  // 解析人气字符串 "42.2万" -> 422000
+  private parseOnline(hn: string): number {
+    if (!hn) return 0;
+    if (hn.includes('万')) {
+      return Math.floor(parseFloat(hn.replace('万', '')) * 10000);
+    }
+    return parseInt(hn) || 0;
   }
 
   async getRoomDetail(roomId: string): Promise<RoomDetail> {
     const url = `https://www.douyu.com/betard/${roomId}`;
     const data = await this.fetchJSON<any>(url);
+
+    if (!data.room) {
+      throw new Error('房间不存在或已关闭');
+    }
+
     const room = data.room;
+    const isLive = room.show_status === 1;
+
+    // 从 room_biz_all.hot 获取人气值
+    const hot = room.room_biz_all?.hot || '0';
+    const online = parseInt(hot) || 0;
 
     return {
-      roomId: room.room_id,
+      roomId,
       platform: this.platform,
-      title: room.room_name,
+      title: room.room_name || '未知标题',
       owner: {
-        name: room.owner_name,
-        avatar: room.avatar,
+        name: room.owner_name || '未知主播',
+        avatar: room.avatar || 'https://apic.douyucdn.cn/upload/_middle.jpg',
       },
-      cover: room.room_pic,
-      online: parseInt(room.room_biz_all?.hot || '0'),
-      category: room.second_lvl_name,
-      isLive: room.show_status === 1,
-      description: room.show_details,
-      playUrls: await this.getPlayUrls(roomId),
+      cover: room.room_thumb || 'https://rpic.douyucdn.cn/live-cover/appCovers/default.jpg',
+      online,
+      category: room.second_lvl_name || room.cate_name || '其他',
+      isLive,
+      description: room.show_details || '',
+      playUrls: isLive ? await this.getPlayUrls(roomId) : [],
     };
   }
 
@@ -61,14 +84,18 @@ export class DouyuClient extends PlatformClient {
 
   async search(keyword: string, onlyLive: boolean): Promise<LiveRoom[]> {
     const url = `https://www.douyu.com/japi/search/api/searchShow?kw=${encodeURIComponent(keyword)}&page=1&pageSize=20`;
-
     const data = await this.fetchJSON<any>(url);
-    const list = data.data?.relateShow || [];
 
-    return list
+    if (!data.data?.relateShow) {
+      return [];
+    }
+
+    const rooms = data.data.relateShow;
+
+    return rooms
       .filter((item: any) => !onlyLive || item.isLive === 1)
       .map((item: any) => ({
-        roomId: item.rid,
+        roomId: String(item.rid),
         platform: this.platform,
         title: item.roomName,
         owner: {
@@ -76,8 +103,8 @@ export class DouyuClient extends PlatformClient {
           avatar: item.avatar,
         },
         cover: item.roomSrc,
-        online: parseInt(item.hot || '0'),
-        category: item.cateName,
+        online: this.parseOnline(item.hot),
+        category: item.cateName || '其他',
         isLive: item.isLive === 1,
       }));
   }
