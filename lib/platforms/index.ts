@@ -1,10 +1,11 @@
 import type { Platform } from '@/types/live';
 import type { PlatformClient } from './base';
+import { DouyuClient } from './douyu';
 
 export function getPlatformClient(platform: Platform): PlatformClient {
   switch (platform) {
     case 'douyu':
-      throw new Error('Douyu client not implemented yet');
+      return new DouyuClient();
     case 'huya':
       throw new Error('Huya client not implemented yet');
     case 'bilibili':
