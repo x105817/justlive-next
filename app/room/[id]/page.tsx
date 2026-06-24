@@ -3,6 +3,8 @@ import { getPlatformClient } from '@/lib/platforms';
 import type { Platform } from '@/types/live';
 import { Badge } from '@/components/ui/badge';
 import { formatNumber, getPlatformName } from '@/lib/format';
+import { FollowButton } from '@/components/live/FollowButton';
+import { checkFollowing } from '@/app/actions/follow';
 
 interface RoomPageProps {
   params: Promise<{ id: string }>;
@@ -19,6 +21,7 @@ export default async function RoomPage({ params }: RoomPageProps) {
   try {
     const client = getPlatformClient(platform);
     const room = await client.getRoomDetail(roomId);
+    const isFollowing = await checkFollowing(platform, roomId);
 
     return (
       <div className="container mx-auto px-4 py-8">
@@ -45,7 +48,12 @@ export default async function RoomPage({ params }: RoomPageProps) {
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-start">
+                <FollowButton
+                  platform={platform}
+                  roomId={roomId}
+                  initialFollowing={isFollowing}
+                />
                 <Badge variant="destructive">
                   {formatNumber(room.online)} 在线
                 </Badge>
