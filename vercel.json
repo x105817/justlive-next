@@ -1,0 +1,9 @@
+{
+  "buildCommand": "prisma generate && next build",
+  "installCommand": "npm install",
+  "regions": ["hkg1"],
+  "env": {
+    "DATABASE_URL": "@postgres-url",
+    "DIRECT_URL": "@postgres-url-non-pooling"
+  }
+}
