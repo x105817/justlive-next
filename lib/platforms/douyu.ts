@@ -24,19 +24,10 @@ export class DouyuClient extends PlatformClient {
         avatar: item.avatar,
       },
       cover: item.roomSrc,
-      online: this.parseOnline(item.hn),
+      online: item.hn || '0',
       category: item.cate2Name || '其他',
       isLive: item.isLive === 1,
     }));
-  }
-
-  // 解析人气字符串 "42.2万" -> 422000
-  private parseOnline(hn: string): number {
-    if (!hn) return 0;
-    if (hn.includes('万')) {
-      return Math.floor(parseFloat(hn.replace('万', '')) * 10000);
-    }
-    return parseInt(hn) || 0;
   }
 
   async getRoomDetail(roomId: string): Promise<RoomDetail> {
@@ -50,9 +41,8 @@ export class DouyuClient extends PlatformClient {
     const room = data.room;
     const isLive = room.show_status === 1;
 
-    // 从 room_biz_all.hot 获取人气值
-    const hot = room.room_biz_all?.hot || '0';
-    const online = parseInt(hot) || 0;
+    // 从 room_biz_all.hot 获取人气值，保留原始格式
+    const online = room.room_biz_all?.hot || '0';
 
     return {
       roomId,
@@ -103,7 +93,7 @@ export class DouyuClient extends PlatformClient {
           avatar: item.avatar,
         },
         cover: item.roomSrc,
-        online: this.parseOnline(item.hot),
+        online: item.hot || '0',
         category: item.cateName || '其他',
         isLive: item.isLive === 1,
       }));

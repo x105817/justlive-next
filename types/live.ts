@@ -9,7 +9,7 @@ export interface LiveRoom {
     avatar: string;
   };
   cover: string;
-  online: number;
+  online: string | number;
   category: string;
   isLive: boolean;
 }
